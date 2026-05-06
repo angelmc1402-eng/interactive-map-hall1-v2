@@ -321,8 +321,8 @@
     // ==========================================
     async function cargarSponsors() {
         try {
-            // Buscamos tu archivo seller.html
-            const respHTML = await fetch('seller.html?v=' + new Date().getTime());
+            // Buscamos tu archivo Seller.html
+            const respHTML = await fetch('Seller.html?v=' + new Date().getTime());
             if (!respHTML.ok) return; // Si no existe aún, no hacemos nada
             
             const html = await respHTML.text();
