@@ -1,1 +1,311 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador de Mesas - Hall 1</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #333; color: white; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* ZONA DEL MAPA */
+        #map-area { flex: 1; overflow: auto; position: relative; background: #1a1a1a; cursor: grab; }
+        #map-area:active { cursor: grabbing; }
+        
+        #map-container { position: relative; transform-origin: 0 0; }
+        #map-img { display: block; user-select: none; pointer-events: none; }
+        
+        /* BLOQUES DRAGGABLES */
+        .block-drag { position: absolute; border: 2px dashed #f1c40f; cursor: move; padding: 2px; box-sizing: border-box; background: rgba(241, 196, 15, 0.1); }
+        .block-drag:hover { border-color: #e74c3c; background: rgba(231, 76, 60, 0.2); }
+        .block-drag .mesa-temp { position: absolute; border: 1px solid #2ecc71; background: rgba(46, 204, 113, 0.5); box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; text-shadow: 1px 1px 0 #000; }
+        
+        /* PANEL DE CONTROL */
+        #panel { width: 350px; background: #222; border-left: 2px solid #444; padding: 20px; box-sizing: border-box; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        h2 { margin-top: 0; font-size: 18px; color: #f1c40f; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 12px; font-weight: bold; color: #aaa; }
+        select, input, button { padding: 8px; border-radius: 4px; border: 1px solid #555; background: #111; color: white; font-family: inherit; }
+        button { background: #2980b9; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; }
+        button:hover { background: #3498db; }
+        
+        .btn-danger { background: #c0392b; }
+        .btn-danger:hover { background: #e74c3c; }
+        .btn-success { background: #27ae60; padding: 15px; font-size: 16px; margin-top: 20px;}
+        .btn-success:hover { background: #2ecc71; }
+        
+        .tools { display: flex; gap: 10px; }
+        .tools button { flex: 1; }
+
+        #output { width: 100%; height: 150px; font-family: monospace; font-size: 10px; background: #000; color: #0f0; padding: 10px; box-sizing: border-box; resize: none; border: 1px solid #555; }
+    </style>
+</head>
+<body>
+
+    <div id="map-area">
+        <div id="map-container">
+            <img id="map-img" src="Hall 1.png" alt="Mapa">
+        </div>
+    </div>
+
+    <div id="panel">
+        <h2>1. Parámetros de Mesa</h2>
+        <div class="tools">
+            <div class="control-group" style="flex:1;">
+                <label>Ancho (px)</label>
+                <input type="number" id="t-width" value="40">
+            </div>
+            <div class="control-group" style="flex:1;">
+                <label>Alto (px)</label>
+                <input type="number" id="t-height" value="20">
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Separación entre mesas (px)</label>
+            <input type="number" id="t-gap" value="2">
+        </div>
+
+        <h2>2. Elegir Bloque</h2>
+        <div class="control-group">
+            <label>Bloques Predefinidos</label>
+            <select id="block-select">
+                <optgroup label="Bloques de 20">
+                    <option value="TCG-A-20">TCG Collector A (20)</option>
+                    <option value="TCG-B-20">TCG Collector B (20)</option>
+                    <option value="SPORT CARDS-C-20">Sport Cards Commercial C (20)</option>
+                    <option value="SPORT CARDS-A-20">Sport Cards Collector A (20)</option>
+                </optgroup>
+                <optgroup label="Bloques de 24">
+                    <option value="TCG-E-24">TCG Collector E (24)</option>
+                    <option value="TCG-F-24">TCG Collector F (24)</option>
+                    <option value="SPORT CARDS-E-24">Sport Cards Commercial E (24)</option>
+                    <option value="SPORT CARDS-F-24">Sport Cards Commercial F (24)</option>
+                    <option value="TCG-G-24">TCG Commercial G (24)</option>
+                    <option value="TCG-H-24">TCG Commercial H (24)</option>
+                    <option value="TCG-I-24">TCG Commercial I (24)</option>
+                    <option value="TCG-J-24">TCG Commercial J (24)</option>
+                    <option value="TCG-K-24">TCG Commercial K (24)</option>
+                </optgroup>
+                <optgroup label="Bloques de 28">
+                    <option value="TCG-C-28">TCG Collector C (28)</option>
+                    <option value="TCG-D-28">TCG Collector D (28)</option>
+                    <option value="SPORT CARDS-D-28">Sport Cards Commercial D (28)</option>
+                    <option value="SPORT CARDS-B-28">Sport Cards Collector B (28)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <button onclick="addBlock()">+ Añadir Bloque al Mapa</button>
+        
+        <h2>3. Herramientas del Bloque</h2>
+        <p style="font-size:11px; color:#aaa; margin:0;">Haz clic en un bloque en el mapa para seleccionarlo.</p>
+        <div class="tools">
+            <button onclick="rotateSelected()">🔄 Rotar Bloque</button>
+            <button class="btn-danger" onclick="deleteSelected()">🗑️ Borrar</button>
+        </div>
+
+        <button class="btn-success" onclick="exportHTML()">🚀 EXPORTAR MESAS.HTML</button>
+        <textarea id="output" placeholder="Aquí aparecerá tu código HTML para copiarlo..."></textarea>
+    </div>
+
+    <script>
+        const mapContainer = document.getElementById('map-container');
+        const mapArea = document.getElementById('map-area');
+        
+        let selectedBlock = null;
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // Paneo del mapa (arrastrar el fondo)
+        let isPanning = false, startX, startY, scrollLeft, scrollTop;
+        mapArea.addEventListener('mousedown', (e) => {
+            if(e.target.closest('.block-drag')) return; // Si clicas un bloque, no paneas
+            isPanning = true;
+            startX = e.pageX - mapArea.offsetLeft;
+            startY = e.pageY - mapArea.offsetTop;
+            scrollLeft = mapArea.scrollLeft;
+            scrollTop = mapArea.scrollTop;
+        });
+        window.addEventListener('mouseup', () => isPanning = false);
+        window.addEventListener('mousemove', (e) => {
+            if(!isPanning) return;
+            e.preventDefault();
+            const x = e.pageX - mapArea.offsetLeft;
+            const y = e.pageY - mapArea.offsetTop;
+            mapArea.scrollLeft = scrollLeft - (x - startX);
+            mapArea.scrollTop = scrollTop - (y - startY);
+        });
+
+        // Crear Bloque
+        function addBlock() {
+            const selectVal = document.getElementById('block-select').value;
+            const parts = selectVal.split('-'); 
+            const category = parts[0]; 
+            const zone = parts[1]; 
+            const count = parseInt(parts[2]);
+
+            const tWidth = parseInt(document.getElementById('t-width').value);
+            const tHeight = parseInt(document.getElementById('t-height').value);
+            const gap = parseInt(document.getElementById('t-gap').value);
+
+            // Crear contenedor del bloque
+            const block = document.createElement('div');
+            block.className = 'block-drag';
+            block.setAttribute('data-cat', category);
+            block.setAttribute('data-zone', zone);
+            block.setAttribute('data-count', count);
+            block.setAttribute('data-rotated', 'false'); // false = vertical (2 columnas)
+            
+            // Posición inicial en el centro de lo que estás viendo
+            block.style.left = (mapArea.scrollLeft + 100) + 'px';
+            block.style.top = (mapArea.scrollTop + 100) + 'px';
+
+            renderTablesInBlock(block, tWidth, tHeight, gap, false);
+
+            // Eventos Drag
+            block.addEventListener('mousedown', startDragBlock);
+            
+            mapContainer.appendChild(block);
+            selectBlock(block);
+        }
+
+        // Renderiza las mesas dentro del bloque (Vertical u Horizontal)
+        function renderTablesInBlock(block, tw, th, gap, isRotated) {
+            block.innerHTML = ''; // Limpiar
+            const count = parseInt(block.getAttribute('data-count'));
+            const cat = block.getAttribute('data-cat');
+            const zone = block.getAttribute('data-zone');
+            
+            const cols = 2; // Por defecto siempre son grupos de 2
+            const rows = Math.ceil(count / cols);
+
+            let blockW, blockH;
+
+            if (!isRotated) {
+                // VERTICAL (2 columnas, N filas)
+                blockW = (tw * cols) + (gap * (cols - 1)) + 4; // +4 por el padding visual
+                blockH = (th * rows) + (gap * (rows - 1)) + 4;
+            } else {
+                // ROTADO: HORIZONTAL (N columnas, 2 filas)
+                blockW = (th * rows) + (gap * (rows - 1)) + 4; // Intercambiamos anchos y altos
+                blockH = (tw * cols) + (gap * (cols - 1)) + 4;
+            }
+
+            block.style.width = blockW + 'px';
+            block.style.height = blockH + 'px';
+
+            for (let i = 0; i < count; i++) {
+                const mesa = document.createElement('div');
+                mesa.className = 'mesa-temp';
+                mesa.innerText = i + 1;
+                mesa.setAttribute('data-info', `${cat}-${zone}-${i+1}`);
+
+                let c, r;
+                if (!isRotated) {
+                    c = i % cols;
+                    r = Math.floor(i / cols);
+                    mesa.style.width = tw + 'px';
+                    mesa.style.height = th + 'px';
+                    mesa.style.left = (c * (tw + gap) + 2) + 'px';
+                    mesa.style.top = (r * (th + gap) + 2) + 'px';
+                } else {
+                    // Si está rotado, la fila y columna visual se invierten
+                    c = Math.floor(i / cols); // N columnas
+                    r = i % cols; // 2 filas
+                    mesa.style.width = th + 'px'; // Invertimos dimensiones de la mesa
+                    mesa.style.height = tw + 'px';
+                    mesa.style.left = (c * (th + gap) + 2) + 'px';
+                    mesa.style.top = (r * (tw + gap) + 2) + 'px';
+                }
+                block.appendChild(mesa);
+            }
+        }
+
+        // Seleccionar Bloque
+        function selectBlock(block) {
+            if(selectedBlock) selectedBlock.style.borderColor = '#f1c40f';
+            selectedBlock = block;
+            selectedBlock.style.borderColor = '#3498db';
+        }
+
+        // Drag Logic
+        function startDragBlock(e) {
+            e.stopPropagation();
+            selectBlock(this);
+            isDragging = true;
+            const rect = this.getBoundingClientRect();
+            const mapRect = mapContainer.getBoundingClientRect();
+            
+            // Calculamos el offset respecto al contenedor del mapa
+            dragOffsetX = (e.clientX - mapRect.left) - parseInt(this.style.left || 0);
+            dragOffsetY = (e.clientY - mapRect.top) - parseInt(this.style.top || 0);
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging || !selectedBlock) return;
+            const mapRect = mapContainer.getBoundingClientRect();
+            let newX = (e.clientX - mapRect.left) - dragOffsetX;
+            let newY = (e.clientY - mapRect.top) - dragOffsetY;
+            
+            selectedBlock.style.left = newX + 'px';
+            selectedBlock.style.top = newY + 'px';
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        // Rotar Bloque
+        function rotateSelected() {
+            if (!selectedBlock) return alert("Selecciona un bloque primero.");
+            const tWidth = parseInt(document.getElementById('t-width').value);
+            const tHeight = parseInt(document.getElementById('t-height').value);
+            const gap = parseInt(document.getElementById('t-gap').value);
+            
+            let isRotated = selectedBlock.getAttribute('data-rotated') === 'true';
+            isRotated = !isRotated; // Invertir
+            selectedBlock.setAttribute('data-rotated', isRotated.toString());
+            
+            renderTablesInBlock(selectedBlock, tWidth, tHeight, gap, isRotated);
+        }
+
+        // Borrar Bloque
+        function deleteSelected() {
+            if (!selectedBlock) return;
+            selectedBlock.remove();
+            selectedBlock = null;
+        }
+
+        // Exportar a HTML Absoluto
+        function exportHTML() {
+            let htmlOutput = "";
+            const blocks = document.querySelectorAll('.block-drag');
+            
+            blocks.forEach(block => {
+                const blockX = parseFloat(block.style.left);
+                const blockY = parseFloat(block.style.top);
+                
+                const mesas = block.querySelectorAll('.mesa-temp');
+                mesas.forEach(mesa => {
+                    const mesaX = parseFloat(mesa.style.left);
+                    const mesaY = parseFloat(mesa.style.top);
+                    const mesaW = parseFloat(mesa.style.width);
+                    const mesaH = parseFloat(mesa.style.height);
+                    const info = mesa.getAttribute('data-info');
+
+                    // Calculamos la posición absoluta en la imagen
+                    const finalX = (blockX + mesaX).toFixed(1);
+                    const finalY = (blockY + mesaY).toFixed(1);
+
+                    htmlOutput += `<div class="mesa" data-info="${info}" style="left: ${finalX}px; top: ${finalY}px; width: ${mesaW}px; height: ${mesaH}px;"></div>\n`;
+                });
+                htmlOutput += "\n";
+            });
+
+            document.getElementById('output').value = htmlOutput;
+            document.getElementById('output').select();
+            document.execCommand('copy');
+            alert("¡Código exportado y copiado al portapapeles! Listo para pegarlo en tu mesas.html");
+        }
+    </script>
+</body>
+</html>
