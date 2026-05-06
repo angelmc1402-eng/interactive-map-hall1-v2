@@ -11,7 +11,7 @@
         --deep-green: #27ae60;
         --sold-red: #e74c3c;
         --vip-purple: #9b59b6;
-        --commercial-blue: #3498db;ha
+        --commercial-blue: #3498db;
         --text-gray: #95a5a6;
         --text-dark: #1f2937;
         --font-main: 'Inter', sans-serif;
@@ -88,7 +88,7 @@
     .sponsor-zone:hover .sponsor-logo-box { border-color: var(--vip-purple); }
     .sponsor-logo-box img { width: 100%; height: 100%; object-fit: contain; }
 
-    /* Layout para stands alargados (data-dual="true") */
+    /* Layout for dual logos (data-dual="true") */
     .sponsor-logo-box.dual-layout { flex-direction: column; justify-content: space-around; }
     .sponsor-logo-box.dual-layout img { height: 45%; width: 100%; }
 
@@ -113,7 +113,6 @@
     .sp-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     .btn-ig { background: #fdf2f8; color: #e1306c; border: 1px solid #fbcfe8; }
     .btn-web { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; }
-
     .sp-icon { width: 18px; height: 18px; object-fit: contain; }
 
     /* UI ELEMENTS */
@@ -128,7 +127,7 @@
 
     #zoom-ui { position: fixed; bottom: 30px; right: 30px; background: white; padding: 6px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 20000; display: flex; gap: 5px; }
     .zoom-btn { width: 45px; height: 45px; border-radius: 50%; border: none; background: transparent; font-weight: 800; color: var(--text-gray); cursor: pointer; transition: all 0.2s; font-size: 14px; }
-    .zoom-btn:hover { background: #f1f5f9; color: #var(--text-dark); }
+    .zoom-btn:hover { background: #f1f5f9; color: var(--text-dark); }
     .zoom-btn.active { background: var(--text-dark); color: white; }
 
     #loupe { position: fixed; width: 260px; height: 260px; border-radius: 50%; border: 4px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.3); pointer-events: none; overflow: hidden; z-index: 15000; opacity: 0; display: none; background: #fff; left: 0; top: 0; will-change: transform; }
@@ -148,7 +147,7 @@
 
     <div id="map-wrapper">
         <div id="container">
-            <img id="map-img" src="Hall 1.png" alt="Hall 1 Floor Plan">
+            <img id="map-img" src="Hall-1.png" alt="Hall 1 Floor Plan">
             <div id="capa-mesas"></div> 
             <div id="capa-sponsors"></div>
         </div>
@@ -188,13 +187,18 @@
                 let zoneName = parts.length >= 2 ? parts[1] : "-";
                 let tableNum = parts.length >= 3 ? parts[2] : (parts[1] || "0"); 
 
-                if (info.includes("TCG")) catName = "TCG & Cards";
+                // Requirement: TCG simply
+                if (info.includes("TCG")) catName = "TCG";
                 else if (info.includes("SPORT")) catName = "Sport Cards";
 
                 let type = "Collector Table";
                 let price = "100,00 €";
 
-                if (info.includes("COMMERCIAL") || /-(G|H|I|J|K)-/.test(info)) {
+                // Logic for Commercial: Original ones + Sport Cards Zones C,D,E,F
+                const isSportComm = info.includes("SPORT") && /-(C|D|E|F)-/.test(info);
+                const isTcgComm = info.includes("COMMERCIAL") || /-(G|H|I|J|K)-/.test(info);
+
+                if (isSportComm || isTcgComm) {
                     type = "Commercial Table";
                     price = "250,00 €";
                     m.classList.add('commercial'); 
@@ -308,8 +312,7 @@
         document.body.className = 'is-state-' + state;
         container.style.transition = instant ? 'none' : 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
         if (state === 0) {
-            currentScale = baseScale; 
-            currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
+            currentScale = baseScale; currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
             currentY = (window.innerHeight - (mapImg.naturalHeight * baseScale)) / 2;
             container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
             document.getElementById('side-menu').classList.remove('visible');
