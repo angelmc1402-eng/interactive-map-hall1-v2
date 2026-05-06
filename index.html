@@ -88,6 +88,10 @@
     .sponsor-zone:hover .sponsor-logo-box { border-color: var(--vip-purple); }
     .sponsor-logo-box img { width: 100%; height: 100%; object-fit: contain; }
 
+    /* Layout para stands alargados (data-dual="true") */
+    .sponsor-logo-box.dual-layout { flex-direction: column; justify-content: space-around; }
+    .sponsor-logo-box.dual-layout img { height: 45%; width: 100%; }
+
     .sponsor-tooltip {
         position: absolute; bottom: 125%; left: 50%;
         transform: translateX(-50%) translateY(10px) scale(calc(1 / var(--map-scale)));
@@ -124,7 +128,7 @@
 
     #zoom-ui { position: fixed; bottom: 30px; right: 30px; background: white; padding: 6px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 20000; display: flex; gap: 5px; }
     .zoom-btn { width: 45px; height: 45px; border-radius: 50%; border: none; background: transparent; font-weight: 800; color: var(--text-gray); cursor: pointer; transition: all 0.2s; font-size: 14px; }
-    .zoom-btn:hover { background: #f1f5f9; color: var(--text-dark); }
+    .zoom-btn:hover { background: #f1f5f9; color: #var(--text-dark); }
     .zoom-btn.active { background: var(--text-dark); color: white; }
 
     #loupe { position: fixed; width: 260px; height: 260px; border-radius: 50%; border: 4px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.3); pointer-events: none; overflow: hidden; z-index: 15000; opacity: 0; display: none; background: #fff; left: 0; top: 0; will-change: transform; }
@@ -225,10 +229,17 @@
                 const logo = sp.getAttribute('data-logo');
                 const ig = sp.getAttribute('data-ig');
                 const web = sp.getAttribute('data-web');
+                
+                const isDual = sp.getAttribute('data-dual') === 'true';
+                const boxClass = isDual ? "sponsor-logo-box dual-layout" : "sponsor-logo-box";
+                
+                const logoHTML = isDual 
+                    ? `<img src="${logo}" alt="${name}"><img src="${logo}" alt="${name}">`
+                    : `<img src="${logo}" alt="${name}">`;
 
                 sp.innerHTML = `
-                    <div class="sponsor-logo-box">
-                        ${logo ? `<img src="${logo}" alt="${name}">` : `<span style="color:#333; font-size:10px; font-weight:800;">${name}</span>`}
+                    <div class="${boxClass}">
+                        ${logo ? logoHTML : `<span style="color:#333; font-size:10px; font-weight:800;">${name}</span>`}
                     </div>
                     <div class="sponsor-tooltip">
                         <div class="sp-name">${name}</div>
@@ -267,7 +278,7 @@
         } catch (err) { console.error("Sync error:", err); }
     }
 
-    // NAVEGACIÓN Y ZOOM
+    // ZOOM & NAVIGATION ENGINE
     const container = document.getElementById('container');
     const mapImg = document.getElementById('map-img');
     let currentZoomState = 0, baseScale = 1, currentScale = 1, currentX = 0, currentY = 0, isDragging = false, startX, startY, initialX, initialY;
@@ -297,7 +308,8 @@
         document.body.className = 'is-state-' + state;
         container.style.transition = instant ? 'none' : 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
         if (state === 0) {
-            currentScale = baseScale; currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
+            currentScale = baseScale; 
+            currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
             currentY = (window.innerHeight - (mapImg.naturalHeight * baseScale)) / 2;
             container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
             document.getElementById('side-menu').classList.remove('visible');
