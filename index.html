@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HALL 1 - Master Builder V3</title>
+    <title>HALL 1 - Master Builder V3.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
     :root {
@@ -24,21 +24,21 @@
     #container { position: relative; transform-origin: 0 0; transition: transform 0.05s ease-out; display: inline-block; }
     img { display: block; image-rendering: high-quality; max-width: none; pointer-events: none; user-select: none; }
 
-    /* GRUPO DE MESAS (El Bloque) */
+    /* GRUPO DE MESAS (El Bloque invisible, solo contenedor) */
     .mesa-group {
         position: absolute;
-        border: 2px dashed rgba(255, 255, 255, 0.3);
+        border: none; /* CERO MARCOS */
         cursor: grab;
         z-index: 10;
         box-sizing: border-box;
     }
     .mesa-group:active { cursor: grabbing; }
-    .mesa-group:hover { border-color: rgba(255, 255, 255, 0.8); z-index: 100; }
+    .mesa-group:hover { z-index: 100; }
     .mesa-group.selected {
-        border: 2px solid var(--azul-sel);
-        background: rgba(0, 210, 211, 0.1);
+        border: none; /* CERO MARCOS */
+        background: transparent;
         z-index: 200;
-        box-shadow: 0 0 20px rgba(0, 210, 211, 0.4);
+        box-shadow: none;
     }
 
     /* MESAS INDIVIDUALES (Dentro del bloque) */
@@ -50,6 +50,22 @@
         border-radius: 2px;
         display: flex; align-items: center; justify-content: center;
         font-size: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 0 #000;
+        transition: background 0.1s ease, border-color 0.1s ease;
+    }
+
+    /* HOVER Y SELECCIÓN DIRECTA A LAS MESAS */
+    .mesa-group:hover .mesa {
+        background: rgba(46, 204, 113, 0.8);
+    }
+    
+    /* Cuando el grupo está seleccionado, las mesas se vuelven azules */
+    .mesa-group.selected .mesa {
+        background: rgba(0, 210, 211, 0.7);
+        border-color: #ffffff;
+        box-shadow: 0 0 10px rgba(0, 210, 211, 0.8);
+    }
+    .mesa-group.selected:hover .mesa {
+        background: rgba(0, 210, 211, 0.9);
     }
 
     /* PALETA IZQUIERDA */
@@ -170,7 +186,8 @@
             <b>ATAJOS DE TECLADO:</b><br>
             • <b>R</b>: Girar Bloque/Mesa<br>
             • <b>Supr</b>: Borrar Seleccionado<br>
-            • <b>Flechas</b>: Mover al milímetro
+            • <b>Flechas</b>: Micro-ajuste<br>
+            • <b>Shift + Flechas</b>: Movimiento normal
         </div>
     </div>
 
@@ -197,7 +214,7 @@
 
     <div id="viewport">
         <div id="container">
-            <img id="map-img" src="Hall 1.png" alt="Map Hall 1">
+            <img id="map-img" src="Hall-1.png" alt="Map Hall 1">
             <div id="capa-mesas"></div> 
         </div>
     </div>
@@ -234,7 +251,7 @@
             document.getElementById('m-h').value = 0.54;
         } else {
             document.getElementById('m-w').value = 0.43;
-            document.getElementById('m-h').value = 1.52;
+            document.getElementById('m-h').value = 1.50;
         }
     });
 
@@ -385,7 +402,6 @@
         propPanel.classList.add('active');
         
         inputId.value = selectedGroup.getAttribute('data-prefix');
-        // Rellenar las cajas con el width y height real del elemento seleccionado (útil si alternamos entre horiz y vert)
         document.getElementById('b-count').value = selectedGroup.getAttribute('data-count');
     }
 
@@ -466,20 +482,26 @@
         }
     }
 
-    // --- TECLADO ---
+    // --- TECLADO (AHORA CON MICRO-PRECISIÓN EXTREMA) ---
     document.addEventListener('keydown', (e) => {
         if(!selectedGroup) return;
         if (document.activeElement === inputId || document.activeElement.tagName === 'INPUT') return;
 
         if(e.key.startsWith('Arrow')) {
             e.preventDefault();
-            const step = e.shiftKey ? 0.5 : 0.05; 
+            
+            // NORMAL: 0.005% -> Precisión de píxel para zoom gigante
+            // SHIFT:  0.05%  -> Movimiento un poco más rápido
+            const step = e.shiftKey ? 0.05 : 0.005; 
+            
             let t = parseFloat(selectedGroup.style.top);
             let l = parseFloat(selectedGroup.style.left);
+            
             if(e.key === 'ArrowUp') t -= step;
             if(e.key === 'ArrowDown') t += step;
             if(e.key === 'ArrowLeft') l -= step;
             if(e.key === 'ArrowRight') l += step;
+            
             selectedGroup.style.top = t.toFixed(4) + '%';
             selectedGroup.style.left = l.toFixed(4) + '%';
         }
