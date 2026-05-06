@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HALL 1 - Master Builder (Blocks)</title>
+    <title>HALL 1 - Master Builder V3</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
     :root {
@@ -84,15 +84,18 @@
     #prop-float {
         position: fixed; top: 20px; right: 20px; background: white; padding: 15px;
         border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 20000;
-        width: 220px; display: none;
+        width: 250px; display: none;
     }
     #prop-float.active { display: block; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     @keyframes popIn { from { transform: scale(0.9); opacity:0; } to { transform: scale(1); opacity:1; } }
 
-    .btn-action { width: 100%; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 8px; font-size: 12px; }
+    .btn-action { width: 100%; padding: 8px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 11px; }
+    .btn-rot { background: var(--naranja-rot); color: white; margin-bottom: 10px;}
+    .btn-del { background: var(--rojo-del); color: white; margin-top: 10px;}
+
+    .dup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
     .btn-dup { background: var(--verde-base); color: white; }
-    .btn-rot { background: var(--naranja-rot); color: white; }
-    .btn-del { background: var(--rojo-del); color: white; }
+    .btn-dup:hover { background: #27ae60; }
 
     #export-bar {
         position: fixed; bottom: 20px; left: 350px; right: 20px;
@@ -111,32 +114,40 @@
         <h3>🏗️ Block Builder</h3>
         
         <div class="tuner-box">
-            <div class="tuner-title">1. CONFIGURAR BLOQUE</div>
+            <div class="tuner-title">1. CONFIGURACIÓN</div>
             <div class="tuner-grid">
                 <div class="tuner-col">
                     <label>Tamaño Bloque</label>
                     <select id="b-count">
+                        <option value="1" selected>Mesa Individual (1)</option>
                         <option value="20">Bloque de 20</option>
                         <option value="24">Bloque de 24</option>
                         <option value="28">Bloque de 28</option>
-                        <option value="1">Mesa Individual</option>
                     </select>
                 </div>
                 <div class="tuner-col">
-                    <label>Nombre/Prefijo</label>
-                    <input type="text" id="b-prefix" value="TCG-A">
+                    <label>Orientación</label>
+                    <select id="b-ori">
+                        <option value="horiz">Horizontal</option>
+                        <option value="vert">Vertical</option>
+                    </select>
                 </div>
             </div>
             
+            <div class="tuner-col" style="margin-bottom: 10px;">
+                <label>Prefijo o ID (Ej: TCG-A-1)</label>
+                <input type="text" id="b-prefix" value="TCG-A-1">
+            </div>
+
             <div class="tuner-title" style="margin-top: 10px;">2. TAMAÑO MESA (%)</div>
             <div class="tuner-grid">
                 <div class="tuner-col">
                     <label>Ancho (W)</label>
-                    <input type="number" step="0.01" id="m-w" value="1.50" oninput="updateSelectedGroup()">
+                    <input type="number" step="0.01" id="m-w" value="1.15" oninput="updateSelectedGroup()">
                 </div>
                 <div class="tuner-col">
                     <label>Alto (H)</label>
-                    <input type="number" step="0.01" id="m-h" value="0.80" oninput="updateSelectedGroup()">
+                    <input type="number" step="0.01" id="m-h" value="0.54" oninput="updateSelectedGroup()">
                 </div>
             </div>
 
@@ -153,23 +164,30 @@
             </div>
         </div>
 
-        <button class="btn-create" onclick="spawnBlock()">➕ INYECTAR BLOQUE</button>
+        <button class="btn-create" onclick="spawnBlock()">➕ INYECTAR BLOQUE / MESA</button>
 
         <div class="shortcuts">
             <b>ATAJOS DE TECLADO:</b><br>
-            • <b>R</b>: Girar Bloque Entero<br>
-            • <b>D</b>: Duplicar Bloque<br>
-            • <b>Supr</b>: Borrar Bloque<br>
+            • <b>R</b>: Girar Bloque/Mesa<br>
+            • <b>Supr</b>: Borrar Seleccionado<br>
             • <b>Flechas</b>: Mover al milímetro
         </div>
     </div>
 
     <div id="prop-float">
-        <label style="font-size:10px; font-weight:bold; color:#999;">PREFIJO BLOQUE</label>
+        <label style="font-size:10px; font-weight:bold; color:#999;">ID / PREFIJO</label>
         <input type="text" id="inp-id" style="width:100%; padding:8px; border:2px solid #ddd; border-radius:4px; font-weight:bold; font-family:monospace; margin-bottom:10px; box-sizing: border-box;">
         
-        <button class="btn-action btn-rot" onclick="rotateSelected()">🔄 GIRAR BLOQUE (R)</button>
-        <button class="btn-action btn-dup" onclick="duplicateSelected()">✨ DUPLICAR (D)</button>
+        <button class="btn-action btn-rot" onclick="rotateSelected()">🔄 GIRAR (R)</button>
+        
+        <label style="font-size:10px; font-weight:bold; color:#999; display:block; margin-bottom:5px;">DUPLICAR EXACTO (AUTO +1)</label>
+        <div class="dup-grid">
+            <button class="btn-action btn-dup" onclick="duplicateDirection('up')">⬆️ Arriba</button>
+            <button class="btn-action btn-dup" onclick="duplicateDirection('down')">⬇️ Abajo</button>
+            <button class="btn-action btn-dup" onclick="duplicateDirection('left')">⬅️ Izq</button>
+            <button class="btn-action btn-dup" onclick="duplicateDirection('right')">➡️ Der</button>
+        </div>
+
         <button class="btn-action btn-del" onclick="deleteSelected()">🗑️ ELIMINAR</button>
     </div>
 
@@ -179,7 +197,7 @@
 
     <div id="viewport">
         <div id="container">
-            <img id="map-img" src="Hall 1.png" alt="Map Hall 1">
+            <img id="map-img" src="Hall-1.png" alt="Map Hall 1">
             <div id="capa-mesas"></div> 
         </div>
     </div>
@@ -209,16 +227,31 @@
         viewport.addEventListener('wheel', handleWheel, { passive: false });
     }
 
+    // Auto-Ajustar Inputs según Orientación
+    document.getElementById('b-ori').addEventListener('change', function() {
+        if(this.value === 'horiz') {
+            document.getElementById('m-w').value = 1.15;
+            document.getElementById('m-h').value = 0.54;
+        } else {
+            document.getElementById('m-w').value = 0.43;
+            document.getElementById('m-h').value = 1.52;
+        }
+    });
+
     // --- GENERADOR DE BLOQUES ---
     window.spawnBlock = function() {
         const count = parseInt(document.getElementById('b-count').value);
-        const prefix = document.getElementById('b-prefix').value.trim() || "BLOCK";
+        const prefix = document.getElementById('b-prefix').value.trim() || "MESA";
+        const isHoriz = document.getElementById('b-ori').value === 'horiz';
         
+        // Si es vertical desde el inicio y es bloque, false=columnas verticales
+        const rotatedStr = isHoriz ? "true" : "false";
+
         const group = document.createElement('div');
         group.className = 'mesa-group';
         group.setAttribute('data-prefix', prefix);
         group.setAttribute('data-count', count);
-        group.setAttribute('data-rotated', 'false'); // false = 2 columnas. true = 2 filas.
+        group.setAttribute('data-rotated', rotatedStr);
         
         // Poner en el centro de la pantalla
         const rect = viewport.getBoundingClientRect();
@@ -239,15 +272,14 @@
 
     // --- RENDERIZADOR MATEMÁTICO DEL GRUPO ---
     function renderGroup(group) {
-        group.innerHTML = ''; // Limpiamos las mesas de dentro
+        group.innerHTML = ''; 
         
         const count = parseInt(group.getAttribute('data-count'));
         const prefix = group.getAttribute('data-prefix');
         const isRotated = group.getAttribute('data-rotated') === 'true';
 
-        // Leer valores del panel (En porcentajes respecto al mapa general)
-        const w = parseFloat(document.getElementById('m-w').value) || 1.5;
-        const h = parseFloat(document.getElementById('m-h').value) || 0.8;
+        const w = parseFloat(document.getElementById('m-w').value) || 1.15;
+        const h = parseFloat(document.getElementById('m-h').value) || 0.54;
         const gapX = parseFloat(document.getElementById('g-x').value) || 0.2;
         const gapY = parseFloat(document.getElementById('g-y').value) || 0.2;
 
@@ -255,28 +287,38 @@
         if (count === 1) {
             cols = 1; rows = 1;
         } else if (!isRotated) {
-            cols = 2; // Por defecto bloques verticales de 2 columnas
+            cols = 2; 
             rows = Math.ceil(count / cols);
         } else {
-            rows = 2; // Si rotamos, son 2 filas y X columnas
+            rows = 2; 
             cols = Math.ceil(count / rows);
         }
 
-        // Calcular el tamaño total del grupo
         const groupW = (cols * w) + ((cols - 1) * gapX);
         const groupH = (rows * h) + ((rows - 1) * gapY);
 
         group.style.width = groupW + '%';
         group.style.height = groupH + '%';
 
-        // Crear las mesas por dentro (Posicionadas en % respecto al GRUPO)
         for (let i = 0; i < count; i++) {
             const mesa = document.createElement('div');
             mesa.className = 'mesa';
-            mesa.innerText = i + 1;
+            
+            // Lógica ID
+            if (count === 1) {
+                mesa.setAttribute('data-info', prefix); // No añade -1 si es mesa suelta
+                // Mostrar solo el numero final en la caja
+                let nums = prefix.match(/\d+$/);
+                mesa.innerText = nums ? nums[0] : "";
+            } else {
+                mesa.setAttribute('data-info', `${prefix}-${i+1}`);
+                mesa.innerText = i + 1;
+            }
             
             let c, r;
-            if (!isRotated) {
+            if (count === 1) {
+                c = 0; r = 0;
+            } else if (!isRotated) {
                 c = i % cols;
                 r = Math.floor(i / cols);
             } else {
@@ -284,7 +326,6 @@
                 r = i % rows;
             }
 
-            // Calculamos posición relativa al grupo
             const leftP = ((c * (w + gapX)) / groupW) * 100;
             const topP = ((r * (h + gapY)) / groupH) * 100;
             const widthP = (w / groupW) * 100;
@@ -294,7 +335,6 @@
             mesa.style.top = topP + '%';
             mesa.style.width = widthP + '%';
             mesa.style.height = heightP + '%';
-            mesa.setAttribute('data-info', `${prefix}-${i+1}`);
 
             group.appendChild(mesa);
         }
@@ -307,13 +347,12 @@
     // --- INTERACCIONES Y ARRASTRE ---
     function addInteractions(el) {
         el.addEventListener('mousedown', (e) => {
-            if(e.button !== 0) return; // Solo click izquierdo
+            if(e.button !== 0) return; 
             e.stopPropagation();
             selectGroup(el);
             isDragging = true;
             
             const rect = el.getBoundingClientRect();
-            // Offset inicial del ratón dentro del div
             dragOffset.x = (e.clientX - rect.left) / scale;
             dragOffset.y = (e.clientY - rect.top) / scale;
         });
@@ -324,12 +363,9 @@
         e.preventDefault();
         
         const containerRect = container.getBoundingClientRect();
-        
-        // Coordenadas del ratón relativas al mapa escalado
         let mouseX = (e.clientX - containerRect.left) / scale;
         let mouseY = (e.clientY - containerRect.top) / scale;
         
-        // Restamos el offset para que no salte el div
         let newX = mouseX - dragOffset.x;
         let newY = mouseY - dragOffset.y;
         
@@ -347,7 +383,10 @@
         selectedGroup = el;
         selectedGroup.classList.add('selected');
         propPanel.classList.add('active');
+        
         inputId.value = selectedGroup.getAttribute('data-prefix');
+        // Rellenar las cajas con el width y height real del elemento seleccionado (útil si alternamos entre horiz y vert)
+        document.getElementById('b-count').value = selectedGroup.getAttribute('data-count');
     }
 
     viewport.addEventListener('mousedown', (e) => {
@@ -361,7 +400,7 @@
     inputId.addEventListener('input', (e) => {
         if(selectedGroup) {
             selectedGroup.setAttribute('data-prefix', e.target.value.toUpperCase());
-            renderGroup(selectedGroup); // Para que se actualicen los tooltips/números
+            renderGroup(selectedGroup); 
         }
     });
 
@@ -371,7 +410,6 @@
         let isRotated = selectedGroup.getAttribute('data-rotated') === 'true';
         selectedGroup.setAttribute('data-rotated', (!isRotated).toString());
         
-        // Invertimos también el Ancho y Alto de la mesa en el panel para que tenga sentido
         const w = document.getElementById('m-w').value;
         const h = document.getElementById('m-h').value;
         document.getElementById('m-w').value = h;
@@ -380,17 +418,42 @@
         renderGroup(selectedGroup);
     }
 
-    window.duplicateSelected = function() {
+    // --- DUPLICADOR MULTIDIRECCIONAL ---
+    window.duplicateDirection = function(dir) {
         if(!selectedGroup) return;
         const clone = selectedGroup.cloneNode(true);
         
-        // Desplazamos un poquito el clon
-        let top = parseFloat(selectedGroup.style.top) + 2;
-        let left = parseFloat(selectedGroup.style.left) + 2;
+        // Magia para sumar +1 al ID automáticamente
+        let prefix = selectedGroup.getAttribute('data-prefix');
+        let match = prefix.match(/(\d+)$/); // Busca números al final
+        if (match) {
+            let num = parseInt(match[1]) + 1;
+            prefix = prefix.replace(/\d+$/, num);
+        } else {
+            prefix += "-2"; // Si no había número, empieza a contar
+        }
+        clone.setAttribute('data-prefix', prefix);
+
+        // Coordenadas actuales
+        let top = parseFloat(selectedGroup.style.top);
+        let left = parseFloat(selectedGroup.style.left);
+        let w = parseFloat(selectedGroup.style.width);
+        let h = parseFloat(selectedGroup.style.height);
+        
+        const gapX = parseFloat(document.getElementById('g-x').value) || 0.2;
+        const gapY = parseFloat(document.getElementById('g-y').value) || 0.2;
+
+        // Desplazamiento exacto de Bloque + Gap
+        if (dir === 'up') top -= (h + gapY);
+        if (dir === 'down') top += (h + gapY);
+        if (dir === 'left') left -= (w + gapX);
+        if (dir === 'right') left += (w + gapX);
+
         clone.style.top = top.toFixed(4) + '%';
         clone.style.left = left.toFixed(4) + '%';
 
         capaMesas.appendChild(clone);
+        renderGroup(clone); // Re-renderizar para aplicar el nuevo ID
         addInteractions(clone);
         selectGroup(clone);
     }
@@ -422,7 +485,6 @@
         }
 
         if(e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
-        if(e.key.toLowerCase() === 'd') duplicateSelected();
         if(e.key.toLowerCase() === 'r') rotateSelected();
     });
 
@@ -447,8 +509,6 @@
     window.exportHTML = function() {
         let html = "\n";
         
-        // Usamos getBoundingClientRect para calcular coordenadas absolutas perfectas
-        // independientemente de si están dentro de un grupo rotado o escalado.
         const mapRect = mapImg.getBoundingClientRect();
         const mesas = document.querySelectorAll('.mesa');
 
@@ -457,7 +517,6 @@
         mesas.forEach(m => {
             const rect = m.getBoundingClientRect();
             
-            // Calculamos % absolutos en relación a la imagen del mapa
             const l = ((rect.left - mapRect.left) / mapRect.width) * 100;
             const t = ((rect.top - mapRect.top) / mapRect.height) * 100;
             const w = (rect.width / mapRect.width) * 100;
