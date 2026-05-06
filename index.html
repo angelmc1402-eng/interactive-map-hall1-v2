@@ -1,219 +1,141 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HALL 2 - Ultimate Precision Map V11 (Con Sponsors)</title>
+    <title>HALL 1 - Interactive Floor Plan</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
     :root {
-        --verde-base: #2ecc71;
-        --verde-deep: #27ae60;
-        --rojo-sold: #e74c3c;
-        --morado-vip: #9b59b6;
+        --primary-green: #2ecc71;
+        --deep-green: #27ae60;
+        --sold-red: #e74c3c;
+        --vip-purple: #9b59b6;
+        --commercial-blue: #3498db;
         --text-gray: #95a5a6;
-        --fuente: 'Inter', sans-serif;
+        --text-dark: #1f2937;
+        --font-main: 'Inter', sans-serif;
         --map-scale: 1; 
     }
 
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e5e7eb; font-family: var(--fuente); }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; font-family: var(--font-main); }
     
-    #map-wrapper { 
-        width: 100vw; height: 100vh; 
-        position: relative; overflow: hidden;
-    }
+    #map-wrapper { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
 
     #container { 
-        position: absolute; 
-        top: 0; left: 0;
-        transform-origin: 0 0; 
+        position: absolute; top: 0; left: 0; transform-origin: 0 0; 
         transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
-        cursor: crosshair; 
-        touch-action: none; 
-        display: inline-block;
+        cursor: crosshair; touch-action: none; display: inline-block;
     }
 
     #map-img { display: block; image-rendering: high-quality; max-width: none; user-select: none; -webkit-user-drag: none; }
 
+    /* LAYERS */
+    #capa-mesas, #capa-sponsors { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    #capa-sponsors { z-index: 50; }
+
     body.is-state-1 #container, body.is-state-2 #container { cursor: grab; }
     body.is-state-1 #container:active, body.is-state-2 #container:active { cursor: grabbing; }
 
-    /* --- CAPAS --- */
-    #capa-mesas, #capa-sponsors {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-    }
-    #capa-sponsors { z-index: 50; } /* Los sponsors van por encima de las mesas */
-
-    /* --- MESAS --- */
+    /* --- TABLES --- */
     .mesa { 
-        position: absolute; 
-        border: 2px solid var(--verde-base); 
-        background: rgba(46, 204, 113, 0.3); 
-        box-sizing: border-box; 
-        border-radius: 2px; 
-        pointer-events: none; 
+        position: absolute; border: 1.5px solid var(--primary-green); 
+        background: rgba(46, 204, 113, 0.25); box-sizing: border-box; 
+        border-radius: 2px; pointer-events: none; 
     }
     
     body.is-state-1 .mesa, body.is-state-2 .mesa { pointer-events: auto; cursor: pointer; }
-    
-    .mesa.commercial { border-color: #3498db; background: rgba(52, 152, 219, 0.3); }
-    .mesa.agotada { background: rgba(231, 76, 60, 0.4) !important; border-color: var(--rojo-sold) !important; cursor: not-allowed; }
+    .mesa.commercial { border-color: var(--commercial-blue); background: rgba(52, 152, 219, 0.25); }
+    .mesa.agotada { background: rgba(231, 76, 60, 0.35) !important; border-color: var(--sold-red) !important; cursor: not-allowed; }
 
-    body.is-state-1 .mesa:hover, body.is-state-1 .mesa:active,
-    body.is-state-2 .mesa:hover, body.is-state-2 .mesa:active { 
-        z-index: 999; border-color: white; 
-        box-shadow: 0 0 20px rgba(0,0,0,0.5); background: rgba(46, 204, 113, 0.7);
+    body.is-state-1 .mesa:hover, body.is-state-2 .mesa:hover { 
+        z-index: 999; border-color: white; box-shadow: 0 0 15px rgba(0,0,0,0.3); background: rgba(46, 204, 113, 0.6);
     }
-    body.is-state-1 .mesa.commercial:hover, body.is-state-2 .mesa.commercial:hover { background: rgba(52, 152, 219, 0.7); }
+    body.is-state-1 .mesa.commercial:hover, body.is-state-2 .mesa.commercial:hover { background: rgba(52, 152, 219, 0.6); }
 
-    /* --- TOOLTIPS MESAS (3 COLUMNAS) --- */
+    /* --- TOOLTIPS (TABLES) --- */
     .custom-tooltip-wrapper {
         position: absolute; bottom: 150%; left: 50%;
         transform: translateX(-50%) translateY(10px) scale(calc(1 / var(--map-scale)));
-        transform-origin: bottom center;
-        width: 360px; 
-        background: white; border-radius: 12px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-        opacity: 0; pointer-events: none; transition: opacity 0.2s ease, transform 0.2s ease;
-        overflow: hidden; display: flex; flex-direction: column;
-        z-index: 1000; 
+        transform-origin: bottom center; width: 340px; 
+        background: white; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        opacity: 0; pointer-events: none; transition: all 0.2s ease; overflow: hidden; display: flex; flex-direction: column; z-index: 1000; 
     }
 
-    body.is-state-1 .mesa:hover .custom-tooltip-wrapper, body.is-state-1 .mesa:active .custom-tooltip-wrapper,
-    body.is-state-2 .mesa:hover .custom-tooltip-wrapper, body.is-state-2 .mesa:active .custom-tooltip-wrapper { 
-        opacity: 1; transform: translateX(-50%) translateY(0) scale(calc(1 / var(--map-scale))); pointer-events: auto;
+    body.is-state-1 .mesa:hover .custom-tooltip-wrapper, body.is-state-2 .mesa:hover .custom-tooltip-wrapper { 
+        opacity: 1; transform: translateX(-50%) translateY(0) scale(calc(1 / var(--map-scale))); 
     }
 
-    .tooltip-row { display: flex; border-bottom: 1px solid #edf2f7; }
-    .tooltip-cell { flex: 1; padding: 12px 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .tooltip-cell:not(:last-child) { border-right: 1px solid #edf2f7; } 
-    
-    .tooltip-label { color: var(--text-gray); font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;}
-    .tooltip-value { font-size: 15px; font-weight: 800; color: #1f2937; text-align: center; line-height: 1.1;}
-    
-    .tooltip-footer { padding: 14px; font-size: 15px; font-weight: 800; color: white; background: var(--verde-deep); text-align: center; }
-    .mesa.agotada .tooltip-footer { background: var(--rojo-sold); }
-    .mesa.commercial .tooltip-footer { background: #3498db; }
+    .tooltip-row { display: flex; border-bottom: 1px solid #f1f5f9; }
+    .tooltip-cell { flex: 1; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #f1f5f9; }
+    .tooltip-cell:last-child { border-right: none; }
+    .tooltip-label { color: var(--text-gray); font-size: 9px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.05em; }
+    .tooltip-value { font-size: 14px; font-weight: 800; color: var(--text-dark); text-align: center; line-height: 1.2; }
+    .tooltip-footer { padding: 12px; font-size: 14px; font-weight: 800; color: white; background: var(--deep-green); text-align: center; }
+    .mesa.agotada .tooltip-footer { background: var(--sold-red); }
+    .mesa.commercial .tooltip-footer { background: var(--commercial-blue); }
 
-    /* ========================================================= */
-    /* 🌟 SPONSORS / VENDEDORES                  */
-    /* ========================================================= */
-    
-    /* El contenedor global (se activa con el zoom al igual que las mesas) */
-    .sponsor-zone {
-        position: absolute;
-        pointer-events: none; /* Por defecto apagado */
-        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
+    /* --- SPONSORS / SELLERS --- */
+    .sponsor-zone { position: absolute; pointer-events: none; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     body.is-state-1 .sponsor-zone, body.is-state-2 .sponsor-zone { pointer-events: auto; }
 
-    .sponsor-zone:hover {
-        transform: scale(1.1); /* Efecto pop bonito */
-        z-index: 9000;
+    .sponsor-zone:hover { transform: scale(1.08); z-index: 9000; }
+    .sponsor-logo-box { 
+        width: 100%; height: 100%; background: white; border-radius: 8px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; 
+        padding: 5px; box-sizing: border-box; border: 2px solid white; transition: border-color 0.2s;
     }
+    .sponsor-zone:hover .sponsor-logo-box { border-color: var(--vip-purple); }
+    .sponsor-logo-box img { width: 100%; height: 100%; object-fit: contain; }
 
-    /* La caja blanca con la imagen */
-    .sponsor-logo-box {
-        width: 100%; height: 100%;
-        background: white;
-        border-radius: 8px; /* Bordes redondeados modernos */
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        display: flex; align-items: center; justify-content: center;
-        padding: 4px; box-sizing: border-box;
-        border: 2px solid #fff;
-        transition: border-color 0.2s;
-    }
-    .sponsor-zone:hover .sponsor-logo-box { border-color: var(--morado-vip); }
-
-    /* La imagen en sí. object-fit: contain GARANTIZA que no se deforme NUNCA */
-    .sponsor-logo-box img {
-        width: 100%; height: 100%;
-        object-fit: contain; 
-    }
-
-    /* El Tooltip Flotante de los Sponsors */
     .sponsor-tooltip {
-        position: absolute; bottom: 120%; left: 50%;
+        position: absolute; bottom: 125%; left: 50%;
         transform: translateX(-50%) translateY(10px) scale(calc(1 / var(--map-scale)));
-        transform-origin: bottom center;
-        background: white; border-radius: 12px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        padding: 15px; width: max-content; min-width: 180px; text-align: center;
-        opacity: 0; pointer-events: none; transition: all 0.2s ease;
-        border-top: 4px solid var(--morado-vip);
+        transform-origin: bottom center; background: white; border-radius: 14px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3); padding: 18px; width: max-content; min-width: 200px;
+        opacity: 0; pointer-events: none; transition: all 0.25s ease; border-top: 5px solid var(--vip-purple);
     }
+    .sponsor-tooltip::after { content: ''; position: absolute; top: 100%; left: 0; right: 0; height: 35px; }
+    .sponsor-zone:hover .sponsor-tooltip { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(calc(1 / var(--map-scale))); }
 
-    /* EL PUENTE INVISIBLE: Evita que el tooltip se cierre al mover el ratón hacia él */
-    .sponsor-tooltip::after {
-        content: ''; position: absolute;
-        top: 100%; left: 0; right: 0; height: 30px; 
-    }
-
-    .sponsor-zone:hover .sponsor-tooltip {
-        opacity: 1; pointer-events: auto;
-        transform: translateX(-50%) translateY(0) scale(calc(1 / var(--map-scale)));
-    }
-
-    .sp-name { font-size: 16px; font-weight: 800; color: #1f2937; margin-bottom: 10px; }
+    .sp-name { font-size: 18px; font-weight: 800; color: var(--text-dark); margin-bottom: 14px; letter-spacing: -0.02em; }
     .sp-links { display: flex; flex-direction: column; gap: 8px; }
     
     .sp-btn {
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-        padding: 10px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 700;
-        transition: transform 0.1s, background 0.1s;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 10px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 700;
+        transition: all 0.2s;
     }
-    .sp-btn:hover { transform: scale(1.03); }
+    .sp-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     .btn-ig { background: #fdf2f8; color: #e1306c; border: 1px solid #fbcfe8; }
-    .btn-web { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .btn-web { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; }
 
-    /* --- MENÚ LATERAL (BACK) --- */
-    #side-menu {
-        position: fixed; right: -150px; bottom: 100px; 
-        transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-        z-index: 20000; display: flex; flex-direction: column; gap: 10px;
-    }
+    .sp-icon { width: 18px; height: 18px; object-fit: contain; }
+
+    /* UI ELEMENTS */
+    #side-menu { position: fixed; right: -150px; bottom: 100px; transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 20000; }
     #side-menu.visible { right: 30px; } 
+    .btn-back { 
+        background: white; border: none; padding: 12px 24px; border-radius: 50px; font-family: var(--font-main); 
+        font-weight: 800; font-size: 13px; color: var(--text-dark); box-shadow: 0 10px 25px rgba(0,0,0,0.1); cursor: pointer;
+        display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+    }
+    .btn-back:hover { transform: scale(1.05); color: var(--deep-green); }
 
-    .btn-back {
-        background: white; border: none; padding: 12px 20px; border-radius: 50px;
-        font-family: var(--fuente); font-weight: 800; font-size: 13px; color: #1f2937;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15); cursor: pointer;
-        display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
-    }
-    .btn-back:hover { transform: scale(1.05); background: #f8fafc; color: var(--verde-deep); }
+    #zoom-ui { position: fixed; bottom: 30px; right: 30px; background: white; padding: 6px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 20000; display: flex; gap: 5px; }
+    .zoom-btn { width: 45px; height: 45px; border-radius: 50%; border: none; background: transparent; font-weight: 800; color: var(--text-gray); cursor: pointer; transition: all 0.2s; font-size: 14px; }
+    .zoom-btn:hover { background: #f1f5f9; color: var(--text-dark); }
+    .zoom-btn.active { background: var(--text-dark); color: white; }
 
-    /* --- SELECTOR RÁPIDO DE ZOOM --- */
-    #zoom-ui {
-        position: fixed; bottom: 30px; right: 30px;
-        background: white; padding: 6px; border-radius: 50px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 20000;
-        display: flex; gap: 5px;
-    }
-    .zoom-btn {
-        width: 45px; height: 45px; border-radius: 50%; border: none;
-        background: transparent; font-weight: 800; font-family: var(--fuente); color: var(--text-gray);
-        cursor: pointer; transition: all 0.2s; font-size: 14px;
-    }
-    .zoom-btn:hover { background: #f1f5f9; color: #1f2937; }
-    .zoom-btn.active { background: #1f2937; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-
-    /* --- LA LUPA MÁGICA --- */
-    #loupe {
-        position: fixed; width: 260px; height: 260px; border-radius: 50%;
-        border: 4px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 0 15px rgba(0,0,0,0.2);
-        pointer-events: none; overflow: hidden; z-index: 15000; 
-        opacity: 0; display: none; background: #fff;
-        left: 0; top: 0; will-change: transform;
-    }
+    #loupe { position: fixed; width: 260px; height: 260px; border-radius: 50%; border: 4px solid white; box-shadow: 0 15px 35px rgba(0,0,0,0.3); pointer-events: none; overflow: hidden; z-index: 15000; opacity: 0; display: none; background: #fff; left: 0; top: 0; will-change: transform; }
     #loupe.visible { opacity: 1; display: block; }
     #loupe-inner { position: absolute; transform-origin: 0 0; pointer-events: none; will-change: transform; }
-    #loupe .custom-tooltip-wrapper { display: none !important; }
+    #loupe .custom-tooltip-wrapper, #loupe .sponsor-tooltip { display: none !important; }
 
     @media(max-width: 768px) {
         #side-menu { display: none; } 
         #zoom-ui { right: 50%; transform: translateX(50%); bottom: 25px; }
-        .custom-tooltip-wrapper { width: 340px; }
+        .custom-tooltip-wrapper { width: 300px; }
         #loupe { display: none !important; } 
     }
 </style>
@@ -222,23 +144,17 @@
 
     <div id="map-wrapper">
         <div id="container">
-            <img id="map-img" src="Hall 1.png" alt="Map Hall 1">
+            <img id="map-img" src="Hall-1.png" alt="Hall 1 Floor Plan">
             <div id="capa-mesas"></div> 
             <div id="capa-sponsors"></div>
         </div>
     </div>
 
-    <div id="loupe">
-        <div id="loupe-inner"></div>
-    </div>
+    <div id="loupe"><div id="loupe-inner"></div></div>
 
     <div id="side-menu">
         <button class="btn-back" onclick="setZoomStateUI(0, event)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             BACK
         </button>
     </div>
@@ -250,7 +166,7 @@
     </div>
 
 <script>
-    const diccionarioMesas = new Map();
+    const dictionaryMesas = new Map();
     const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuA_zpd7Ays5Xt9MDPQzkzCbxj8s0SaDgQGhuxcthtMl59F3H9oWipgKfsUmbiDloop2b43rqoq8CG/pub?gid=0&single=true&output=csv';
 
     async function cargarMesas() {
@@ -259,31 +175,22 @@
             const html = await respHTML.text();
             document.getElementById('capa-mesas').innerHTML = html;
             
-            const mesas = document.querySelectorAll('.mesa');
-            mesas.forEach(m => {
+            document.querySelectorAll('.mesa').forEach(m => {
                 const info = m.getAttribute('data-info') || ""; 
-                diccionarioMesas.set(info, m); 
+                dictionaryMesas.set(info, m); 
 
                 const parts = info.split('-');
-                
-                let catName = "Diecast";
+                let catName = "Collectors";
                 let zoneName = parts.length >= 2 ? parts[1] : "-";
                 let tableNum = parts.length >= 3 ? parts[2] : (parts[1] || "0"); 
 
-                if (info.includes("MANGACOM")) {
-                    catName = "Manga & Comics";
-                } else if (info.includes("FIGURES")) {
-                    catName = "Figures & Dolls";
-                } else if (info.includes("RETRO")) {
-                    catName = "Retro & Fashion";
-                    zoneName = "-";
-                    tableNum = parts[1]; 
-                }
+                if (info.includes("TCG")) catName = "TCG & Cards";
+                else if (info.includes("SPORT")) catName = "Sport Cards";
 
                 let type = "Collector Table";
                 let price = "100,00 €";
 
-                if (/DIECAST-(G|H)/.test(info) || /FIGURES-(C|D)/.test(info)) {
+                if (info.includes("COMMERCIAL") || /-(G|H|I|J|K)-/.test(info)) {
                     type = "Commercial Table";
                     price = "250,00 €";
                     m.classList.add('commercial'); 
@@ -292,68 +199,48 @@
                 m.innerHTML = `
                     <div class="custom-tooltip-wrapper">
                         <div class="tooltip-row">
-                            <div class="tooltip-cell">
-                                <span class="tooltip-label">Category</span>
-                                <span class="tooltip-value">${catName}</span>
-                            </div>
-                            <div class="tooltip-cell">
-                                <span class="tooltip-label">Zone</span>
-                                <span class="tooltip-value">${zoneName}</span>
-                            </div>
-                            <div class="tooltip-cell">
-                                <span class="tooltip-label">Table</span>
-                                <span class="tooltip-value">${tableNum}</span>
-                            </div>
+                            <div class="tooltip-cell"><span class="tooltip-label">Category</span><span class="tooltip-value">${catName}</span></div>
+                            <div class="tooltip-cell"><span class="tooltip-label">Zone</span><span class="tooltip-value">${zoneName}</span></div>
+                            <div class="tooltip-cell"><span class="tooltip-label">Table</span><span class="tooltip-value">${tableNum}</span></div>
                         </div>
-                        <div class="tooltip-footer">${type}  •  ${price}</div>
+                        <div class="tooltip-footer">${type} • ${price}</div>
                     </div>`;
             });
-            
             await sincronizarConExcel();
-            // Actualizar lupa
-            document.getElementById('loupe-inner').innerHTML = document.getElementById('container').innerHTML;
-
-        } catch (e) { console.error("Error cargando mesas:", e); }
+        } catch (e) { console.error("Error loading tables:", e); }
     }
 
-    // ==========================================
-    // 🌟 MAGIA NUEVA: CARGADOR DE SPONSORS
-    // ==========================================
     async function cargarSponsors() {
         try {
-            // Buscamos tu archivo Seller.html
-            const respHTML = await fetch('Seller.html?v=' + new Date().getTime());
-            if (!respHTML.ok) return; // Si no existe aún, no hacemos nada
-            
+            const respHTML = await fetch('seller.html?v=' + new Date().getTime());
+            if (!respHTML.ok) return;
             const html = await respHTML.text();
             document.getElementById('capa-sponsors').innerHTML = html;
 
-            const sponsors = document.querySelectorAll('.sponsor-zone');
-            sponsors.forEach(sp => {
+            const igIcon = "https://cdn.shopify.com/s/files/1/0772/3633/9020/files/Instagram_icon_a7c6e898-1b4b-42cf-a525-04f05aea43a2.png?v=1778103647";
+            const webIcon = `<svg class="sp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+
+            document.querySelectorAll('.sponsor-zone').forEach(sp => {
                 const name = sp.getAttribute('data-name');
                 const logo = sp.getAttribute('data-logo');
                 const ig = sp.getAttribute('data-ig');
                 const web = sp.getAttribute('data-web');
 
-                // Inyectamos la estructura visual a tu div vacío
                 sp.innerHTML = `
                     <div class="sponsor-logo-box">
-                        ${logo ? `<img src="${logo}" alt="${name}">` : `<span style="color:#333; font-size:12px;">${name}</span>`}
+                        ${logo ? `<img src="${logo}" alt="${name}">` : `<span style="color:#333; font-size:10px; font-weight:800;">${name}</span>`}
                     </div>
-                    
                     <div class="sponsor-tooltip">
                         <div class="sp-name">${name}</div>
                         <div class="sp-links">
-                            ${ig ? `<a href="${ig}" target="_blank" class="sp-btn btn-ig">📸 Instagram</a>` : ''}
-                            ${web ? `<a href="${web}" target="_blank" class="sp-btn btn-web">🛒 Visitar Tienda</a>` : ''}
+                            ${ig ? `<a href="${ig}" target="_blank" class="sp-btn btn-ig"><img src="${igIcon}" class="sp-icon"> Instagram</a>` : ''}
+                            ${web ? `<a href="${web}" target="_blank" class="sp-btn btn-web">${webIcon} Visit Website</a>` : ''}
                         </div>
                     </div>
                 `;
             });
-
-            // Actualizar lupa de nuevo para que los incluya
             document.getElementById('loupe-inner').innerHTML = document.getElementById('container').innerHTML;
-        } catch (e) { console.error("Error cargando sponsors:", e); }
+        } catch (e) { console.error("Error loading sponsors:", e); }
     }
 
     async function sincronizarConExcel() {
@@ -361,231 +248,102 @@
             const urlFinal = URL_CSV + '&cache_ignore=' + Date.now();
             const respuesta = await fetch(urlFinal, { method: 'GET', mode: 'cors', cache: 'no-cache' });
             const filas = (await respuesta.text()).split(/\r?\n/);
-
             filas.forEach((fila, index) => {
                 if (index === 0 || !fila.trim()) return;
                 const col = fila.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (col.length >= 3) {
                     const estado = col[1].replace(/["']/g, "").trim().toUpperCase(); 
                     const idMesa = col[2].replace(/["']/g, "").trim(); 
-                    const mesaDiv = diccionarioMesas.get(idMesa);
-                    
+                    const mesaDiv = dictionaryMesas.get(idMesa);
                     if (mesaDiv) {
                         if (estado.includes("VENDIDA") || estado.includes("SOLD")) {
                             mesaDiv.classList.add('agotada');
                             mesaDiv.querySelector('.tooltip-footer').innerText = "SOLD OUT";
-                        } else {
-                            mesaDiv.classList.remove('agotada');
-                        }
+                        } else { mesaDiv.classList.remove('agotada'); }
                     }
                 }
             });
             document.getElementById('loupe-inner').innerHTML = document.getElementById('container').innerHTML;
-        } catch (err) { console.error("Error sincronizando:", err); }
+        } catch (err) { console.error("Sync error:", err); }
     }
 
-    // ==========================================
-    // MOTOR DE TRIPLE ZOOM & NAVEGACIÓN
-    // ==========================================
+    // NAVEGACIÓN Y ZOOM
     const container = document.getElementById('container');
     const mapImg = document.getElementById('map-img');
-    
-    let currentZoomState = 0; 
-    let baseScale = 1; 
-    let currentScale = 1;
-    
-    let currentX = 0, currentY = 0;
-    let isDragging = false;
-    let startX, startY, initialX, initialY;
+    let currentZoomState = 0, baseScale = 1, currentScale = 1, currentX = 0, currentY = 0, isDragging = false, startX, startY, initialX, initialY;
 
     function initMapPosition() {
-        if(mapImg.naturalWidth === 0) {
-            setTimeout(initMapPosition, 100);
-            return;
-        }
-        
+        if(mapImg.naturalWidth === 0) { setTimeout(initMapPosition, 100); return; }
         const scaleX = window.innerWidth / mapImg.naturalWidth;
         const scaleY = window.innerHeight / mapImg.naturalHeight;
-        
         baseScale = Math.min(scaleX, scaleY) * 0.98;
-        
         if (baseScale > 1) baseScale = 1;
-
         setZoomState(0, null, null, true); 
     }
 
     window.onload = () => {
-        if(mapImg.complete) initMapPosition();
-        else mapImg.onload = initMapPosition;
-        cargarMesas();
-        cargarSponsors(); // ¡Cargamos los sponsors al arrancar!
+        if(mapImg.complete) initMapPosition(); else mapImg.onload = initMapPosition;
+        cargarMesas(); cargarSponsors();
     };
-
-    window.addEventListener('resize', () => {
-        if(currentZoomState === 0) initMapPosition();
-    });
 
     function setZoomState(state, clickClientX = null, clickClientY = null, instant = false) {
         currentZoomState = state;
-        
         let zoomMultiplier = 1;
-        
         if (state === 1) zoomMultiplier = window.innerWidth < 768 ? 3.0 : 2.5; 
         if (state === 2) zoomMultiplier = window.innerWidth < 768 ? 7.0 : 6.0;
-
         let newScale = baseScale * zoomMultiplier;
-
         document.documentElement.style.setProperty('--map-scale', newScale);
-
-        document.querySelectorAll('.zoom-btn').forEach((btn, idx) => {
-            btn.classList.toggle('active', idx === state);
-        });
+        document.querySelectorAll('.zoom-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === state));
         document.body.className = 'is-state-' + state;
-
         container.style.transition = instant ? 'none' : 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
-
         if (state === 0) {
-            currentScale = baseScale;
-            currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
+            currentScale = baseScale; currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
             currentY = (window.innerHeight - (mapImg.naturalHeight * baseScale)) / 2;
-            
             container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
-            
             document.getElementById('side-menu').classList.remove('visible');
-            
-            document.querySelectorAll('.custom-tooltip-wrapper, .sponsor-tooltip').forEach(t => {
-                t.style.opacity = '0'; t.style.pointerEvents = 'none';
-                setTimeout(() => { t.style.opacity = ''; t.style.pointerEvents = ''; }, 300);
-            });
+            document.querySelectorAll('.custom-tooltip-wrapper, .sponsor-tooltip').forEach(t => { t.style.opacity = '0'; t.style.pointerEvents = 'none'; setTimeout(() => { t.style.opacity = ''; t.style.pointerEvents = ''; }, 300); });
         } else {
             document.getElementById('side-menu').classList.add('visible');
-            
-            if (clickClientX !== null && clickClientY !== null) {
-                const mapUnscaledX = (clickClientX - currentX) / currentScale;
-                const mapUnscaledY = (clickClientY - currentY) / currentScale;
-
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-
-                currentX = centerX - (mapUnscaledX * newScale);
-                currentY = centerY - (mapUnscaledY * newScale);
+            const centerX = window.innerWidth / 2, centerY = window.innerHeight / 2;
+            if (clickClientX !== null) {
+                const mapUnscaledX = (clickClientX - currentX) / currentScale, mapUnscaledY = (clickClientY - currentY) / currentScale;
+                currentX = centerX - (mapUnscaledX * newScale); currentY = centerY - (mapUnscaledY * newScale);
             } else {
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                const mapUnscaledX = (centerX - currentX) / currentScale;
-                const mapUnscaledY = (centerY - currentY) / currentScale;
-                
-                currentX = centerX - (mapUnscaledX * newScale);
-                currentY = centerY - (mapUnscaledY * newScale);
+                const mapUnscaledX = (centerX - currentX) / currentScale, mapUnscaledY = (centerY - currentY) / currentScale;
+                currentX = centerX - (mapUnscaledX * newScale); currentY = centerY - (mapUnscaledY * newScale);
             }
-            
-            currentScale = newScale;
-            container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+            currentScale = newScale; container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
         }
     }
 
-    container.addEventListener('click', (e) => {
-        // Evitar que haga zoom si hacemos clic en un enlace de sponsor
-        if (e.target.closest('a')) return;
+    container.addEventListener('click', (e) => { if (e.target.closest('a') || isDragging) return; let nextState = currentZoomState + 1; if (nextState > 2) nextState = 0; setZoomState(nextState, e.clientX, e.clientY); });
+    window.setZoomStateUI = function(state, event) { if (event) event.stopPropagation(); document.getElementById('loupe').classList.remove('visible'); setZoomState(state, null, null); };
 
-        if (isDragging) return; 
-        document.getElementById('loupe').classList.remove('visible');
+    function startDrag(clientX, clientY) { if (currentZoomState === 0) return; isDragging = true; startX = clientX; startY = clientY; initialX = currentX; initialY = currentY; container.style.transition = 'none'; }
+    function doDrag(clientX, clientY) { if (!isDragging) return; currentX = initialX + (clientX - startX); currentY = initialY + (clientY - startY); container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`; }
+    function endDrag() { if (!isDragging) return; setTimeout(() => isDragging = false, 50); container.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'; }
 
-        let nextState = currentZoomState + 1;
-        if (nextState > 2) nextState = 0; 
-
-        setZoomState(nextState, e.clientX, e.clientY);
-    });
-
-    window.setZoomStateUI = function(state, event) {
-        if (event) event.stopPropagation(); 
-        document.getElementById('loupe').classList.remove('visible');
-        setZoomState(state, null, null);
-    };
-
-    function startDrag(clientX, clientY) {
-        if (currentZoomState === 0) return; 
-        isDragging = true;
-        startX = clientX;
-        startY = clientY;
-        initialX = currentX;
-        initialY = currentY;
-        container.style.transition = 'none'; 
-    }
-
-    function doDrag(clientX, clientY) {
-        if (!isDragging) return;
-        currentX = initialX + (clientX - startX);
-        currentY = initialY + (clientY - startY);
-        container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
-    }
-
-    function endDrag() {
-        if (!isDragging) return;
-        setTimeout(() => isDragging = false, 50); 
-        container.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'; 
-    }
-
-    container.addEventListener('mousedown', (e) => {
-        // No arrastrar si estamos clickando en un enlace de sponsor
-        if (e.target.closest('.sponsor-tooltip')) return;
-        startDrag(e.clientX, e.clientY);
-    });
+    container.addEventListener('mousedown', (e) => { if (e.target.closest('.sponsor-tooltip')) return; startDrag(e.clientX, e.clientY); });
     window.addEventListener('mousemove', (e) => doDrag(e.clientX, e.clientY));
     window.addEventListener('mouseup', endDrag);
-    window.addEventListener('mouseleave', endDrag);
-
-    container.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.sponsor-tooltip')) return;
-        startDrag(e.touches[0].clientX, e.touches[0].clientY);
-    });
-    window.addEventListener('touchmove', (e) => {
-        if (currentZoomState > 0) e.preventDefault(); 
-        doDrag(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
+    container.addEventListener('touchstart', (e) => { if (e.target.closest('.sponsor-tooltip')) return; startDrag(e.touches[0].clientX, e.touches[0].clientY); });
+    window.addEventListener('touchmove', (e) => { if (currentZoomState > 0) e.preventDefault(); doDrag(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
     window.addEventListener('touchend', endDrag);
 
-    // ==========================================
-    // LA LUPA MÁGICA
-    // ==========================================
-    const loupe = document.getElementById('loupe');
-    const loupeInner = document.getElementById('loupe-inner');
-    const loupeSize = 260; 
-    const loupeMultiplier = 1.6; 
-    
+    const loupe = document.getElementById('loupe'), loupeInner = document.getElementById('loupe-inner'), loupeSize = 260, loupeMultiplier = 1.6; 
     window.addEventListener('pointermove', (e) => {
-        // TRUCO NINJA: Si estamos encima de un sponsor, apagamos la lupa para poder clickar
-        if (e.target.closest('.sponsor-zone') || window.innerWidth < 768 || e.pointerType === 'touch' || currentZoomState > 0 || isDragging) {
-            loupe.classList.remove('visible');
-            return;
-        }
-
+        if (e.target.closest('.sponsor-zone') || window.innerWidth < 768 || e.pointerType === 'touch' || currentZoomState > 0 || isDragging) { loupe.classList.remove('visible'); return; }
         const rect = container.getBoundingClientRect();
-        
-        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-            loupe.classList.remove('visible');
-            return;
-        }
-
-        loupe.classList.add('visible');
-        loupe.style.transform = `translate(${e.clientX - loupeSize / 2}px, ${e.clientY - loupeSize / 2}px)`;
-
-        loupeInner.style.width = mapImg.naturalWidth + 'px';
-        loupeInner.style.height = mapImg.naturalHeight + 'px';
-
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) { loupe.classList.remove('visible'); return; }
+        loupe.classList.add('visible'); loupe.style.transform = `translate(${e.clientX - loupeSize / 2}px, ${e.clientY - loupeSize / 2}px)`;
+        loupeInner.style.width = mapImg.naturalWidth + 'px'; loupeInner.style.height = mapImg.naturalHeight + 'px';
         const targetZoom = baseScale * loupeMultiplier;
-
-        const mapUnscaledX = (e.clientX - currentX) / baseScale;
-        const mapUnscaledY = (e.clientY - currentY) / baseScale;
-
-        const tx = (loupeSize / 2) - (mapUnscaledX * targetZoom);
-        const ty = (loupeSize / 2) - (mapUnscaledY * targetZoom);
-
+        const tx = (loupeSize / 2) - ((e.clientX - currentX) / baseScale * targetZoom);
+        const ty = (loupeSize / 2) - ((e.clientY - currentY) / baseScale * targetZoom);
         loupeInner.style.transform = `translate(${tx}px, ${ty}px) scale(${targetZoom})`;
     });
 
     setInterval(sincronizarConExcel, 120000); 
-
 </script>
 </body>
 </html>
