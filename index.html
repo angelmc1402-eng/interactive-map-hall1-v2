@@ -26,6 +26,8 @@
         position: absolute; top: 0; left: 0; transform-origin: 0 0; 
         transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); 
         cursor: crosshair; touch-action: none; display: inline-block;
+        /* OPTIMIZACIÓN GPU: Prepara el contenedor para moverse fluidamente */
+        will-change: transform;
     }
 
     #map-img { display: block; image-rendering: high-quality; max-width: none; user-select: none; -webkit-user-drag: none; }
@@ -60,6 +62,7 @@
         transform-origin: bottom center; width: 340px; 
         background: white; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.25);
         opacity: 0; pointer-events: none; transition: all 0.2s ease; overflow: hidden; display: flex; flex-direction: column; z-index: 1000; 
+        will-change: transform, opacity;
     }
 
     body.is-state-1 .mesa:hover .custom-tooltip-wrapper, body.is-state-2 .mesa:hover .custom-tooltip-wrapper { 
@@ -91,26 +94,19 @@
     /* Layout for dual logos (data-dual="true") */
     .sponsor-logo-box.dual-layout { flex-direction: column; justify-content: space-around; }
     .sponsor-logo-box.dual-layout img { height: 45%; width: 100%; }
-.sponsor-tooltip {
+    
+    .sponsor-tooltip {
         position: absolute; 
-        /* 1. Lo pegamos matemáticamente al borde exacto de la caja */
-        bottom: 100%; 
-        left: 50%;
-        /* 2. Usamos el margen del tooltip para separarlo (así escala en proporción) */
-        margin-bottom: 15px; 
+        bottom: 100%; left: 50%; margin-bottom: 15px; 
         transform: translateX(-50%) translateY(10px) scale(calc(1 / var(--map-scale)));
         transform-origin: bottom center; background: white; border-radius: 14px;
         box-shadow: 0 20px 50px rgba(0,0,0,0.3); padding: 18px; width: max-content; min-width: 200px;
         opacity: 0; pointer-events: none; transition: all 0.25s ease; border-top: 5px solid var(--vip-purple);
+        will-change: transform, opacity;
     }
 
-    /* EL PUENTE INDESTRUCTIBLE */
     .sponsor-tooltip::after { 
-        content: ''; 
-        position: absolute; 
-        top: 100%; 
-        left: -30px; right: -30px; /* Ancho extra de seguridad por los lados */
-        height: 50px; /* Este puente de 50px siempre será más grande que el margen de 15px, sin importar el zoom */
+        content: ''; position: absolute; top: 100%; left: -30px; right: -30px; height: 50px; 
     }
     .sponsor-zone:hover .sponsor-tooltip { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(calc(1 / var(--map-scale))); }
 
@@ -199,14 +195,12 @@
                 let zoneName = parts.length >= 2 ? parts[1] : "-";
                 let tableNum = parts.length >= 3 ? parts[2] : (parts[1] || "0"); 
 
-                // Requirement: TCG simply
                 if (info.includes("TCG")) catName = "TCG";
                 else if (info.includes("SPORT")) catName = "Sport Cards";
 
                 let type = "Collector Table";
                 let price = "100,00 €";
 
-                // Logic for Commercial: Original ones + Sport Cards Zones C,D,E,F
                 const isSportComm = info.includes("SPORT") && /-(B|D|E|F)-/.test(info);
                 const isTcgComm = info.includes("COMMERCIAL") || /-(G|H|I|J|K)-/.test(info);
 
@@ -294,10 +288,16 @@
         } catch (err) { console.error("Sync error:", err); }
     }
 
-    // ZOOM & NAVIGATION ENGINE
+    // ZOOM & NAVIGATION ENGINE (¡AQUÍ ESTÁ LA MAGIA DE RENDIMIENTO!)
     const container = document.getElementById('container');
     const mapImg = document.getElementById('map-img');
-    let currentZoomState = 0, baseScale = 1, currentScale = 1, currentX = 0, currentY = 0, isDragging = false, startX, startY, initialX, initialY;
+    let currentZoomState = 0, baseScale = 1, currentScale = 1, currentX = 0, currentY = 0;
+    let isDragging = false, startX, startY, initialX, initialY;
+    
+    // Variables de optimización rAF
+    let dragTicking = false;
+    let targetX = 0;
+    let targetY = 0;
 
     function initMapPosition() {
         if(mapImg.naturalWidth === 0) { setTimeout(initMapPosition, 100); return; }
@@ -323,6 +323,7 @@
         document.querySelectorAll('.zoom-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === state));
         document.body.className = 'is-state-' + state;
         container.style.transition = instant ? 'none' : 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
+        
         if (state === 0) {
             currentScale = baseScale; currentX = (window.innerWidth - (mapImg.naturalWidth * baseScale)) / 2;
             currentY = (window.innerHeight - (mapImg.naturalHeight * baseScale)) / 2;
@@ -341,14 +342,56 @@
             }
             currentScale = newScale; container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
         }
+        
+        // Actualizamos las variables de arrastre para evitar saltos si el usuario hace clic y arrastra justo después del zoom
+        targetX = currentX;
+        targetY = currentY;
     }
 
     container.addEventListener('click', (e) => { if (e.target.closest('a') || isDragging) return; let nextState = currentZoomState + 1; if (nextState > 2) nextState = 0; setZoomState(nextState, e.clientX, e.clientY); });
     window.setZoomStateUI = function(state, event) { if (event) event.stopPropagation(); document.getElementById('loupe').classList.remove('visible'); setZoomState(state, null, null); };
 
-    function startDrag(clientX, clientY) { if (currentZoomState === 0) return; isDragging = true; startX = clientX; startY = clientY; initialX = currentX; initialY = currentY; container.style.transition = 'none'; }
-    function doDrag(clientX, clientY) { if (!isDragging) return; currentX = initialX + (clientX - startX); currentY = initialY + (clientY - startY); container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`; }
-    function endDrag() { if (!isDragging) return; setTimeout(() => isDragging = false, 50); container.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'; }
+    function startDrag(clientX, clientY) { 
+        if (currentZoomState === 0) return; 
+        isDragging = true; 
+        startX = clientX; 
+        startY = clientY; 
+        initialX = currentX; 
+        initialY = currentY; 
+        targetX = currentX;
+        targetY = currentY;
+        container.style.transition = 'none'; 
+    }
+    
+    // Función optimizada que dibuja el fotograma
+    function updateDragPosition() {
+        if (!isDragging) {
+            dragTicking = false;
+            return;
+        }
+        currentX = targetX;
+        currentY = targetY;
+        container.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+        dragTicking = false;
+    }
+
+    function doDrag(clientX, clientY) { 
+        if (!isDragging) return; 
+        targetX = initialX + (clientX - startX); 
+        targetY = initialY + (clientY - startY); 
+        
+        // En lugar de forzar el CSS ahora, pedimos turno para el próximo refresco de pantalla
+        if (!dragTicking) {
+            requestAnimationFrame(updateDragPosition);
+            dragTicking = true;
+        }
+    }
+    
+    function endDrag() { 
+        if (!isDragging) return; 
+        isDragging = false; 
+        container.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'; 
+    }
 
     container.addEventListener('mousedown', (e) => { if (e.target.closest('.sponsor-tooltip')) return; startDrag(e.clientX, e.clientY); });
     window.addEventListener('mousemove', (e) => doDrag(e.clientX, e.clientY));
@@ -358,16 +401,45 @@
     window.addEventListener('touchend', endDrag);
 
     const loupe = document.getElementById('loupe'), loupeInner = document.getElementById('loupe-inner'), loupeSize = 260, loupeMultiplier = 1.6; 
-    window.addEventListener('pointermove', (e) => {
-        if (e.target.closest('.sponsor-zone') || window.innerWidth < 768 || e.pointerType === 'touch' || currentZoomState > 0 || isDragging) { loupe.classList.remove('visible'); return; }
+    
+    let loupeTicking = false;
+    let loupeEvent = null;
+
+    function updateLoupe() {
+        if (!loupeEvent) return;
+        const e = loupeEvent;
+        
+        if (e.target.closest('.sponsor-zone') || window.innerWidth < 768 || e.pointerType === 'touch' || currentZoomState > 0 || isDragging) { 
+            loupe.classList.remove('visible'); 
+            loupeTicking = false;
+            return; 
+        }
         const rect = container.getBoundingClientRect();
-        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) { loupe.classList.remove('visible'); return; }
-        loupe.classList.add('visible'); loupe.style.transform = `translate(${e.clientX - loupeSize / 2}px, ${e.clientY - loupeSize / 2}px)`;
-        loupeInner.style.width = mapImg.naturalWidth + 'px'; loupeInner.style.height = mapImg.naturalHeight + 'px';
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) { 
+            loupe.classList.remove('visible'); 
+            loupeTicking = false;
+            return; 
+        }
+        
+        loupe.classList.add('visible'); 
+        loupe.style.transform = `translate(${e.clientX - loupeSize / 2}px, ${e.clientY - loupeSize / 2}px)`;
+        loupeInner.style.width = mapImg.naturalWidth + 'px'; 
+        loupeInner.style.height = mapImg.naturalHeight + 'px';
         const targetZoom = baseScale * loupeMultiplier;
         const tx = (loupeSize / 2) - ((e.clientX - currentX) / baseScale * targetZoom);
         const ty = (loupeSize / 2) - ((e.clientY - currentY) / baseScale * targetZoom);
         loupeInner.style.transform = `translate(${tx}px, ${ty}px) scale(${targetZoom})`;
+        
+        loupeTicking = false;
+    }
+
+    // Lupa también optimizada con rAF
+    window.addEventListener('pointermove', (e) => {
+        loupeEvent = e;
+        if (!loupeTicking) {
+            requestAnimationFrame(updateLoupe);
+            loupeTicking = true;
+        }
     });
 
     setInterval(sincronizarConExcel, 120000); 
