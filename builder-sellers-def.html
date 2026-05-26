@@ -113,19 +113,21 @@
             <span>✨ FORMATO DUAL (2 Logos)</span>
         </label>
 
-        <div class="input-group" style="display:none;">
+        <!-- ¡Corrección aquí! Quitamos el style="display:none;" -->
+        <div class="input-group">
             <label>URL del Logo</label>
             <input type="text" id="s-logo" placeholder="https://...">
         </div>
-        <div class="input-group" style="display:none;">
+        <div class="input-group">
             <label>URL Instagram</label>
             <input type="text" id="s-ig" placeholder="https://...">
         </div>
-        <div class="input-group" style="display:none;">
+        <div class="input-group">
             <label>URL Web</label>
             <input type="text" id="s-web" placeholder="https://...">
         </div>
 
+        <!-- Grid de 4 elementos para controlar posición y tamaño -->
         <div class="size-grid">
             <div class="input-group" style="margin:0;"><label>X (Left %)</label><input type="number" step="0.05" id="s-left"></div>
             <div class="input-group" style="margin:0;"><label>Y (Top %)</label><input type="number" step="0.05" id="s-top"></div>
