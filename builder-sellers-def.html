@@ -70,8 +70,11 @@
     .checkbox-group span { font-size: 12px; font-weight: 800; color: var(--morado-vip); }
 
     .size-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;}
-    .btn-del { width: 100%; padding: 10px; background: #ff4757; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 12px; }
-    .btn-del:hover { background: #ff6b81; }
+    
+    .action-buttons { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-action { flex: 1; padding: 10px; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; }
+    .btn-del { background: #ff4757; } .btn-del:hover { background: #ff6b81; }
+    .btn-clone { background: #0984e3; } .btn-clone:hover { background: #74b9ff; }
 
     #export-bar { position: fixed; bottom: 20px; left: 330px; right: 20px; pointer-events: none; display: flex; justify-content: center; z-index: 20000; }
     .btn-exp { pointer-events: auto; background: #2d3436; color: var(--oro-base); border: 2px solid var(--oro-base); padding: 12px 30px; border-radius: 50px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.2s; }
@@ -93,7 +96,7 @@
         <button class="btn-create btn-free" onclick="spawnSponsor('free')">🟪 NUEVO ZONA LIBRE</button>
         
         <div style="font-size: 10px; color: #95a5a6; margin-top: 10px; background: #f1f2f6; padding: 10px; border-radius: 5px;">
-            <b>ATAJOS:</b><br>• <b>Supr</b>: Borrar seleccionado<br>• <b>Flechas</b>: Mover al milímetro
+            <b>ATAJOS:</b><br>• <b>Supr</b>: Borrar seleccionado<br>• <b>Flechas</b>: Mover al milímetro<br>• <b>Shift + Flechas</b>: Movimiento rápido
         </div>
     </div>
 
@@ -110,25 +113,30 @@
             <span>✨ FORMATO DUAL (2 Logos)</span>
         </label>
 
-        <div class="input-group">
+        <div class="input-group" style="display:none;">
             <label>URL del Logo</label>
             <input type="text" id="s-logo" placeholder="https://...">
         </div>
-        <div class="input-group">
+        <div class="input-group" style="display:none;">
             <label>URL Instagram</label>
             <input type="text" id="s-ig" placeholder="https://...">
         </div>
-        <div class="input-group">
+        <div class="input-group" style="display:none;">
             <label>URL Web</label>
             <input type="text" id="s-web" placeholder="https://...">
         </div>
 
         <div class="size-grid">
+            <div class="input-group" style="margin:0;"><label>X (Left %)</label><input type="number" step="0.05" id="s-left"></div>
+            <div class="input-group" style="margin:0;"><label>Y (Top %)</label><input type="number" step="0.05" id="s-top"></div>
             <div class="input-group" style="margin:0;"><label>Ancho (%)</label><input type="number" step="0.05" id="s-width"></div>
             <div class="input-group" style="margin:0;"><label>Alto (%)</label><input type="number" step="0.05" id="s-height"></div>
         </div>
 
-        <button class="btn-del" onclick="deleteSelected()">🗑️ Eliminar Sponsor</button>
+        <div class="action-buttons">
+            <button class="btn-action btn-clone" onclick="cloneSelected()">📋 Clonar</button>
+            <button class="btn-action btn-del" onclick="deleteSelected()">🗑️ Eliminar</button>
+        </div>
     </div>
 
     <div id="export-bar">
@@ -158,6 +166,8 @@
     const inpWeb = document.getElementById('s-web');
     const inpWidth = document.getElementById('s-width');
     const inpHeight = document.getElementById('s-height');
+    const inpLeft = document.getElementById('s-left');
+    const inpTop = document.getElementById('s-top');
     const inpDual = document.getElementById('s-dual');
 
     let selectedSponsor = null;
@@ -170,7 +180,7 @@
     function init() {
         fit();
         viewport.addEventListener('wheel', handleWheel, { passive: false });
-        loadExistingSponsors(true); // Intenta cargar silenciosamente al iniciar
+        loadExistingSponsors(true);
     }
 
     // --- CARGAR SPONSORS EXISTENTES ---
@@ -189,12 +199,11 @@
                 sponsors.forEach(sp => {
                     const name = sp.getAttribute('data-name') || "Sponsor";
                     
-                    // Limpiamos el contenido interno por si viene con las etiquetas del index
                     sp.innerHTML = `
                         <span>${name}</span>
                         <span class="dual-badge">DUAL</span>
                     `;
-                    sp.style.pointerEvents = 'auto'; // Habilitar click
+                    sp.style.pointerEvents = 'auto';
                     
                     capaMesas.appendChild(sp);
                     addInteractions(sp);
@@ -212,8 +221,9 @@
         sponsor.className = 'sponsor-zone';
         
         let w = 2, h = 2;
-        if (type === 'small') { w = 2.0; h = 2.0; }
-        else if (type === 'large') { w = 4.0; h = 4.0; }
+        // NUEVAS MEDIDAS SOLICITADAS
+        if (type === 'small') { w = 1.10; h = 1.40; }
+        else if (type === 'large') { w = 5.0; h = 5.0; }
         else if (type === 'free') { w = 5.0; h = 2.0; }
 
         sponsor.style.width = w + '%'; sponsor.style.height = h + '%';
@@ -231,12 +241,36 @@
         const centerX = (rect.width / 2 - container.getBoundingClientRect().left) / scale;
         const centerY = (rect.height / 2 - container.getBoundingClientRect().top) / scale;
 
-        sponsor.style.left = ((centerX / mapImg.naturalWidth) * 100).toFixed(2) + '%';
-        sponsor.style.top = ((centerY / mapImg.naturalHeight) * 100).toFixed(2) + '%';
+        sponsor.style.left = ((centerX / mapImg.naturalWidth) * 100).toFixed(4) + '%';
+        sponsor.style.top = ((centerY / mapImg.naturalHeight) * 100).toFixed(4) + '%';
 
         capaMesas.appendChild(sponsor);
         addInteractions(sponsor);
         selectSponsor(sponsor);
+    }
+
+    // --- CLONAR SPONSOR ---
+    window.cloneSelected = function() {
+        if(!selectedSponsor) return;
+        
+        const clone = selectedSponsor.cloneNode(true);
+        clone.classList.remove('selected');
+        
+        // Desplazamos un poco para que se vea la copia
+        let currentLeft = parseFloat(clone.style.left);
+        let currentTop = parseFloat(clone.style.top);
+        clone.style.left = (currentLeft + 1.5).toFixed(4) + '%';
+        clone.style.top = (currentTop + 1.5).toFixed(4) + '%';
+        
+        // Actualizamos nombre visual
+        let currentName = clone.getAttribute('data-name') || "Sponsor";
+        let newName = currentName + " (Copia)";
+        clone.setAttribute('data-name', newName);
+        clone.querySelector('span:not(.dual-badge)').innerText = newName;
+        
+        capaMesas.appendChild(clone);
+        addInteractions(clone);
+        selectSponsor(clone); // Seleccionamos directamente el clon
     }
 
     // --- INTERACCIONES ---
@@ -258,8 +292,16 @@
         const containerRect = container.getBoundingClientRect();
         let newX = ((e.clientX - containerRect.left) / scale) - dragOffset.x;
         let newY = ((e.clientY - containerRect.top) / scale) - dragOffset.y;
-        selectedSponsor.style.left = ((newX / mapImg.naturalWidth) * 100).toFixed(4) + '%';
-        selectedSponsor.style.top = ((newY / mapImg.naturalHeight) * 100).toFixed(4) + '%';
+        
+        let calcLeft = (newX / mapImg.naturalWidth) * 100;
+        let calcTop = (newY / mapImg.naturalHeight) * 100;
+        
+        selectedSponsor.style.left = calcLeft.toFixed(4) + '%';
+        selectedSponsor.style.top = calcTop.toFixed(4) + '%';
+        
+        // Actualizar inputs en tiempo real al arrastrar
+        inpLeft.value = calcLeft.toFixed(4);
+        inpTop.value = calcTop.toFixed(4);
     });
 
     document.addEventListener('mouseup', () => isDragging = false);
@@ -270,15 +312,17 @@
         selectedSponsor.classList.add('selected');
         propPanel.classList.add('active');
         
-        // Rellenar formulario
         inpName.value = selectedSponsor.getAttribute('data-name');
         inpLogo.value = selectedSponsor.getAttribute('data-logo');
         inpIg.value = selectedSponsor.getAttribute('data-ig');
         inpWeb.value = selectedSponsor.getAttribute('data-web');
         inpDual.checked = selectedSponsor.getAttribute('data-dual') === 'true';
         
-        inpWidth.value = parseFloat(selectedSponsor.style.width).toFixed(2);
-        inpHeight.value = parseFloat(selectedSponsor.style.height).toFixed(2);
+        // Cargar medidas y posiciones exactas
+        inpWidth.value = parseFloat(selectedSponsor.style.width).toFixed(4);
+        inpHeight.value = parseFloat(selectedSponsor.style.height).toFixed(4);
+        inpLeft.value = parseFloat(selectedSponsor.style.left).toFixed(4);
+        inpTop.value = parseFloat(selectedSponsor.style.top).toFixed(4);
     }
 
     viewport.addEventListener('mousedown', (e) => {
@@ -289,7 +333,7 @@
         }
     });
 
-    // --- ACTUALIZADORES EN VIVO ---
+    // --- ACTUALIZADORES EN VIVO DESDE EL PANEL ---
     inpName.addEventListener('input', (e) => {
         if(selectedSponsor) {
             selectedSponsor.setAttribute('data-name', e.target.value);
@@ -299,29 +343,40 @@
     inpLogo.addEventListener('input', (e) => { if(selectedSponsor) selectedSponsor.setAttribute('data-logo', e.target.value.trim()); });
     inpIg.addEventListener('input', (e) => { if(selectedSponsor) selectedSponsor.setAttribute('data-ig', e.target.value.trim()); });
     inpWeb.addEventListener('input', (e) => { if(selectedSponsor) selectedSponsor.setAttribute('data-web', e.target.value.trim()); });
-    
     inpDual.addEventListener('change', (e) => {
         if(selectedSponsor) selectedSponsor.setAttribute('data-dual', e.target.checked ? "true" : "false");
     });
 
     inpWidth.addEventListener('input', (e) => { if(selectedSponsor && e.target.value) selectedSponsor.style.width = parseFloat(e.target.value) + '%'; });
     inpHeight.addEventListener('input', (e) => { if(selectedSponsor && e.target.value) selectedSponsor.style.height = parseFloat(e.target.value) + '%'; });
+    inpLeft.addEventListener('input', (e) => { if(selectedSponsor && e.target.value) selectedSponsor.style.left = parseFloat(e.target.value) + '%'; });
+    inpTop.addEventListener('input', (e) => { if(selectedSponsor && e.target.value) selectedSponsor.style.top = parseFloat(e.target.value) + '%'; });
 
     window.deleteSelected = function() {
         if(selectedSponsor) { selectedSponsor.remove(); selectedSponsor = null; propPanel.classList.remove('active'); }
     }
 
+    // --- MOVIMIENTO CON FLECHAS ---
     document.addEventListener('keydown', (e) => {
         if(!selectedSponsor) return;
         if (document.activeElement.tagName === 'INPUT') return;
+        
         if(e.key.startsWith('Arrow')) {
             e.preventDefault();
-            const step = e.shiftKey ? 0.05 : 0.005; 
+            const step = e.shiftKey ? 0.1 : 0.01; 
             let t = parseFloat(selectedSponsor.style.top); let l = parseFloat(selectedSponsor.style.left);
+            
             if(e.key === 'ArrowUp') t -= step; if(e.key === 'ArrowDown') t += step;
             if(e.key === 'ArrowLeft') l -= step; if(e.key === 'ArrowRight') l += step;
-            selectedSponsor.style.top = t.toFixed(4) + '%'; selectedSponsor.style.left = l.toFixed(4) + '%';
+            
+            selectedSponsor.style.top = t.toFixed(4) + '%'; 
+            selectedSponsor.style.left = l.toFixed(4) + '%';
+            
+            // Actualizar inputs visibles
+            inpTop.value = t.toFixed(4);
+            inpLeft.value = l.toFixed(4);
         }
+        
         if(e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
     });
 
